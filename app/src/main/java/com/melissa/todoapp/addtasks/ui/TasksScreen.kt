@@ -1,14 +1,11 @@
 package com.melissa.todoapp.addtasks.ui
 
-import android.app.Dialog
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,7 +18,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CardElevation
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -31,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,33 +35,59 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.melissa.todoapp.addtasks.ui.models.TaskModel
 
 @Composable
 fun TasksScreen(tasksViewModel: TasksViewModel) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val showDialogState: Boolean by tasksViewModel.showDialod.observeAsState(false)
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        AddTasksDialog(
-            showDialogState,
-            onDismiss = { tasksViewModel.onDialogClose() },
-            onTaskAdded = { tasksViewModel.onTasksCreated(it) })
-        FAB(
-            Modifier.align(alignment = Alignment.BottomEnd),
-            onShowDialogClick = { tasksViewModel.onShowDialogClick() })
-        TasksList(tasksViewModel)
+
+    // Actualizate siempre y el valor del estado asignaselo al uiState
+    val uiState by produceState<TasksUIState>(
+        //initial value es un estado permanente que podemos leer en la ui
+        initialValue = TasksUIState.Loading,
+        key1= lifecycle,
+        key2 =  tasksViewModel
+    ) {
+        lifecycle.repeatOnLifecycle(state = Lifecycle.State.STARTED){
+            tasksViewModel.uiState.collect{
+                value = it
+            }
+        }
     }
+
+    when(uiState){
+        is TasksUIState.Error -> {}
+        TasksUIState.Loading -> {}
+        is TasksUIState.Success -> {
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                AddTasksDialog(
+                    showDialogState,
+                    onDismiss = { tasksViewModel.onDialogClose() },
+                    onTaskAdded = { tasksViewModel.onTasksCreated(it) })
+                FAB(
+                    Modifier.align(alignment = Alignment.BottomEnd),
+                    onShowDialogClick = { tasksViewModel.onShowDialogClick() })
+                TasksList((uiState as TasksUIState.Success).tasks,tasksViewModel)
+            }
+        }
+    }
+
+
 }
 
 @Composable
-fun TasksList(tasksViewModel: TasksViewModel) {
-    val myTasks: List<TaskModel> = tasksViewModel.tasks
-    LazyColumn {
-        items(myTasks, key = { it.id }) { task ->
+fun TasksList(tasks: List<TaskModel>,tasksViewModel: TasksViewModel) {
+     LazyColumn {
+        items(tasks, key = { it.id }) { task ->
             ItemTask(taskModel = task, tasksViewModel)
         }
     }

@@ -3,7 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     //dagger hilt
-    id("kotlin-kapt")  //autogeneracion de codigo
+    //id("kotlin-kapt")  //autogeneracion de codigo -> replaced by ksp
+    id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
 }
 
@@ -42,7 +43,6 @@ android {
 dependencies {
 
     implementation libs.androidx.core.ktx
-    implementation libs.androidx.lifecycle.runtime.ktx
     implementation libs.androidx.activity.compose
     implementation platform(libs.androidx.compose.bom)
     implementation libs.androidx.ui
@@ -51,12 +51,18 @@ dependencies {
     implementation libs.androidx.material3
     //dagger hilt
     implementation(libs.hilt.android.v2511)
-    kapt(libs.hilt.android.compiler.v2511) //autogeneración de codigo
+   // kapt(libs.hilt.android.compiler.v2511) //replaced by ksp
+    ksp(libs.hilt.compiler) //autogeneración de codigo
 
     //LiveData
     implementation libs.androidx.lifecycle.runtime.ktx
     implementation libs.androidx.runtime.livedata
 
+    //Room
+    implementation libs.androidx.room.runtime
+    //kapt libs.androidx.room.compiler // reeplaced by ksp tht is x2 faster
+    ksp(libs.androidx.room.compiler.v250)
+    implementation libs.androidx.room.ktx
 
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit
